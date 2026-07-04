@@ -5974,12 +5974,15 @@ async function callClaudeAI(prompt,maxTokens){
     const data=await response.json();
     if(!response.ok){
       console.error('AI call failed',data.error);
-      return null;
+      return '__DEBUG_ERROR__: '+(data.error||'Unknown error, status '+response.status);
     }
-    return data.text||null;
+    if(!data.text){
+      return '__DEBUG_ERROR__: Function returned empty text. Raw response: '+JSON.stringify(data);
+    }
+    return data.text;
   }catch(e){
     console.error('AI call failed',e);
-    return null;
+    return '__DEBUG_ERROR__: '+e.message;
   }
 }
 function aiLoadCache(key){try{const r=localStorage.getItem(key);return r?JSON.parse(r):null;}catch(e){return null;}}
@@ -6051,13 +6054,11 @@ async function runPatternDetector(force){
   const resultEl=document.getElementById('ai-pattern-result');
   const btnEl=document.getElementById('ai-pattern-btn');
   if(!resultEl)return;
-  const cutoff=new Date();cutoff.setDate(cutoff.getDate()-30);
-  const cutoffKey=keyOf(cutoff);
-  const recentMistakes=mistakes.filter(m=>m.date>=cutoffKey);
+  const recentMistakes=[...mistakes];
   const totalEntries=recentMistakes.length;
   if(totalEntries<3){
     resultEl.classList.remove('loading');
-    resultEl.textContent='Abhi bahut kam data hai — kam se kam 3 mistakes (pichle 30 din mein) add karo, phir pattern milega.';
+    resultEl.textContent='Abhi bahut kam data hai — kam se kam 3 mistakes add karo, phir pattern milega.';
     return;
   }
   const today=todayKey();
@@ -6068,10 +6069,10 @@ async function runPatternDetector(force){
     return;
   }
   resultEl.classList.add('loading');
-  resultEl.textContent='AI pichle 30 din ke mistakes padh raha hai…';
+  resultEl.textContent='AI ab tak ke saare mistakes padh raha hai…';
   if(btnEl)btnEl.disabled=true;
   const mistakeLines=recentMistakes.map(m=>`- [${m.date}] ${m.subject} (${m.category}): ${m.description}`).join('\n')||'Koi mistake nahi';
-  const prompt=`Tum ek JEE aspirant ke study data ka analysis kar rahe ho. Pichle 30 din ke mistakes:
+  const prompt=`Tum ek JEE aspirant ke study data ka analysis kar rahe ho. Ab tak ke saare (lifetime) mistakes:
 
 ${mistakeLines}
 
